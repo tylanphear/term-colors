@@ -1,0 +1,314 @@
+defpackage term-colors:
+  import core
+
+val ESCAPE = to-char(0x1B)
+
+public defenum TerminalColor <: Printable:
+  TerminalBlack
+  TerminalRed
+  TerminalGreen
+  TerminalYellow
+  TerminalBlue
+  TerminalMagenta
+  TerminalCyan
+  TerminalWhite
+  TerminalBrightBlack
+  TerminalBrightRed
+  TerminalBrightGreen
+  TerminalBrightYellow
+  TerminalBrightBlue
+  TerminalBrightMagenta
+  TerminalBrightCyan
+  TerminalBrightWhite
+
+defn color-code (color: TerminalColor, bg?: True|False) -> Int:
+  var code = switch(color):
+    TerminalBlack:         30
+    TerminalRed:           31
+    TerminalGreen:         32
+    TerminalYellow:        33
+    TerminalBlue:          34
+    TerminalMagenta:       35
+    TerminalCyan:          36
+    TerminalWhite:         37
+    TerminalBrightBlack:   90
+    TerminalBrightRed:     91
+    TerminalBrightGreen:   92
+    TerminalBrightYellow:  93
+    TerminalBrightBlue:    94
+    TerminalBrightMagenta: 95
+    TerminalBrightCyan:    96
+    TerminalBrightWhite:   97
+  if bg?:
+    code = code + 10
+  code
+
+defn fg-color-code (color: TerminalColor): (color-code(color, false))
+defn bg-color-code (color: TerminalColor): (color-code(color, true))
+
+public deftype ColorSpec
+public defmulti foreground (c: ColorSpec, color: TerminalColor) -> ColorSpec
+public defmulti background (c: ColorSpec, color: TerminalColor) -> ColorSpec
+
+public defmulti foreground! (c: ColorSpec) -> TerminalColor
+public defmulti background! (c: ColorSpec) -> TerminalColor
+
+public defmulti foreground? (c: ColorSpec) -> True|False
+public defmulti background? (c: ColorSpec) -> True|False
+
+public defmulti bold (c: ColorSpec) -> ColorSpec
+public defmulti dim (c: ColorSpec) -> ColorSpec
+public defmulti italic (c: ColorSpec) -> ColorSpec
+public defmulti underline (c: ColorSpec) -> ColorSpec
+public defmulti reset (c: ColorSpec) -> ColorSpec
+public defmulti clear (c: ColorSpec) -> ColorSpec
+
+public defmulti bold? (c: ColorSpec) -> True|False
+public defmulti dim? (c: ColorSpec) -> True|False
+public defmulti italic? (c: ColorSpec) -> True|False
+public defmulti underline? (c: ColorSpec) -> True|False
+public defmulti reset? (c: ColorSpec) -> True|False
+public defmulti clear? (c: ColorSpec) -> True|False
+
+public defn ColorSpec ():
+  var foreground*: Maybe<TerminalColor> = None()
+  var background*: Maybe<TerminalColor> = None()
+  var reset*: True|False = false
+  var bold*: True|False = false
+  var dim*: True|False = false
+  var italic*: True|False = false
+  var underline*: True|False = false
+
+  new ColorSpec:
+    defmethod foreground (this, color: TerminalColor) -> ColorSpec:
+      foreground* = One(color)
+      this
+
+    defmethod background (this, color: TerminalColor) -> ColorSpec:
+      background* = One(color)
+      this
+
+    defmethod foreground! (this) -> TerminalColor:
+      value!(foreground*)
+
+    defmethod background! (this) -> TerminalColor:
+      value!(background*)
+
+    defmethod foreground? (this) -> True|False:
+      foreground* is One
+
+    defmethod background? (this) -> True|False:
+      background* is One
+
+    defmethod bold (this) -> ColorSpec:
+      bold* = true
+      this
+
+    defmethod dim (this) -> ColorSpec:
+      dim* = true
+      this
+
+    defmethod italic (this) -> ColorSpec:
+      italic* = true
+      this
+
+    defmethod underline (this) -> ColorSpec:
+      underline* = true
+      this
+
+    defmethod reset (this) -> ColorSpec:
+      reset* = true
+      this
+
+    defmethod clear (this) -> ColorSpec:
+      foreground* = None()
+      background* = None()
+      reset* = false
+      bold* = false
+      dim* = false
+      italic* = false
+      underline* = false
+      this
+
+    defmethod bold? (this) -> True|False:
+      bold*
+
+    defmethod dim? (this) -> True|False:
+      dim*
+
+    defmethod italic? (this) -> True|False:
+      italic*
+
+    defmethod underline? (this) -> True|False:
+      underline*
+
+    defmethod reset? (this) -> True|False:
+      reset*
+
+    defmethod clear? (this) -> True|False:
+      not foreground?(this) and
+      not background?(this) and
+      not reset?(this) and
+      not bold?(this) and
+      not dim?(this) and
+      not italic?(this) and
+      not underline?(this)
+
+    defmethod print (o: OutputStream, this) -> False:
+      print(o, "%_[" % [ESCAPE])
+
+      var need-separator? = false
+      if reset?(this):
+        print(o, "0")
+        need-separator? = true
+
+      if bold?(this):
+        if need-separator?: (print(o, ";"))
+        print(o, "1")
+        need-separator? = true
+
+      if dim?(this):
+        if need-separator?: (print(o, ";"))
+        print(o, "2")
+        need-separator? = true
+
+      if italic?(this):
+        if need-separator?: (print(o, ";"))
+        print(o, "3")
+        need-separator? = true
+
+      if underline?(this):
+        if need-separator?: (print(o, ";"))
+        print(o, "4")
+        need-separator? = true
+
+      if foreground?(this):
+        if need-separator?: (print(o, ";"))
+        print(o, "%_" % [fg-color-code(foreground!(this))])
+        need-separator? = true
+
+      if background?(this):
+        if need-separator?: (print(o, ";"))
+        print(o, "%_" % [bg-color-code(background!(this))])
+
+      print(o, "m")
+
+val NC = ColorSpec() $> reset
+
+
+public defstruct ColoredString <: Printable:
+  string: String
+  color: ColorSpec
+
+public defn ColoredString (string: String):
+  ColoredString(string, ColorSpec())
+
+public defn foreground (c: ColoredString, col: TerminalColor) -> ColoredString:
+  ColoredString(string(c), color(c) $> foreground{_, col})
+
+public defn background (c: ColoredString, col: TerminalColor) -> ColoredString:
+  ColoredString(string(c), color(c) $> background{_, col})
+
+public defn bold (c: ColoredString) -> ColoredString:
+  ColoredString(string(c), color(c) $> bold)
+
+public defn dim (c: ColoredString) -> ColoredString:
+  ColoredString(string(c), color(c) $> dim)
+
+public defn italic (c: ColoredString) -> ColoredString:
+  ColoredString(string(c), color(c) $> italic)
+
+public defn underline (c: ColoredString) -> ColoredString:
+  ColoredString(string(c), color(c) $> underline)
+
+public defn reset (c: ColoredString) -> ColoredString:
+  ColoredString(string(c), color(c) $> reset)
+
+public defn clear (c: ColoredString) -> ColoredString:
+  ColoredString(string(c), color(c) $> clear)
+
+public defn foreground? (c: ColoredString) -> True|False:
+   color(c) $> foreground?
+
+public defn background? (c: ColoredString) -> True|False:
+   color(c) $> background?
+
+public defn bold? (c: ColoredString) -> True|False:
+   color(c) $> bold?
+
+public defn dim? (c: ColoredString) -> True|False:
+   color(c) $> dim?
+
+public defn italic? (c: ColoredString) -> True|False:
+   color(c) $> italic?
+
+public defn underline? (c: ColoredString) -> True|False:
+   color(c) $> underline?
+
+public defn reset? (c: ColoredString) -> True|False:
+   color(c) $> reset?
+
+public defn clear? (c: ColoredString) -> True|False:
+   color(c) $> clear?
+
+defmethod print (o: OutputStream, cs: ColoredString) -> False:
+  print(o, "%~%_%~" % [color(cs), string(cs), NC])
+
+
+public defstruct ColoredOutputStream <: OutputStream:
+  stream: OutputStream
+  color: ColorSpec
+
+public defn ColoredOutputStream (stream: OutputStream):
+  ColoredOutputStream(stream, ColorSpec())
+
+public defn foreground (c: ColoredOutputStream, col: TerminalColor) -> ColoredOutputStream:
+  ColoredOutputStream(stream(c), color(c) $> foreground{_, col})
+
+public defn background (c: ColoredOutputStream, col: TerminalColor) -> ColoredOutputStream:
+  ColoredOutputStream(stream(c), color(c) $> background{_, col})
+
+public defn bold (c: ColoredOutputStream) -> ColoredOutputStream:
+  ColoredOutputStream(stream(c), color(c) $> bold)
+
+public defn dim (c: ColoredOutputStream) -> ColoredOutputStream:
+  ColoredOutputStream(stream(c), color(c) $> dim)
+
+public defn italic (c: ColoredOutputStream) -> ColoredOutputStream:
+  ColoredOutputStream(stream(c), color(c) $> italic)
+
+public defn underline (c: ColoredOutputStream) -> ColoredOutputStream:
+  ColoredOutputStream(stream(c), color(c) $> underline)
+
+public defn reset (c: ColoredOutputStream) -> ColoredOutputStream:
+  ColoredOutputStream(stream(c), color(c) $> reset)
+
+public defn clear (c: ColoredOutputStream) -> ColoredOutputStream:
+  ColoredOutputStream(stream(c), color(c) $> clear)
+
+public defn foreground? (c: ColoredOutputStream) -> True|False:
+   color(c) $> foreground?
+
+public defn background? (c: ColoredOutputStream) -> True|False:
+   color(c) $> background?
+
+public defn bold? (c: ColoredOutputStream) -> True|False:
+   color(c) $> bold?
+
+public defn dim? (c: ColoredOutputStream) -> True|False:
+   color(c) $> dim?
+
+public defn italic? (c: ColoredOutputStream) -> True|False:
+   color(c) $> italic?
+
+public defn underline? (c: ColoredOutputStream) -> True|False:
+   color(c) $> underline?
+
+public defn reset? (c: ColoredOutputStream) -> True|False:
+   color(c) $> reset?
+
+public defn clear? (c: ColoredOutputStream) -> True|False:
+   color(c) $> clear?
+
+defmethod print (o: ColoredOutputStream, v) -> False:
+  print(stream(o), "%~%_%~" % [color(o), v, NC])

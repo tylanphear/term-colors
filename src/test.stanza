@@ -1,0 +1,73 @@
+#use-added-syntax(tests)
+defpackage term-colors/test:
+  import core
+  import term-colors
+
+val DUMMY = new OutputStream
+
+deftest can-set-foreground-color:
+  val spec = ColorSpec() $> foreground{_, TerminalRed}
+  #EXPECT(foreground?(spec))
+  #EXPECT(foreground!(spec) == TerminalRed)
+
+deftest can-set-background-color:
+  val spec = ColorSpec() $> background{_, TerminalRed}
+  #EXPECT(background?(spec))
+  #EXPECT(background!(spec) == TerminalRed)
+
+deftest can-set-bold:
+  #EXPECT(ColorSpec() $> bold $> bold?)
+  #EXPECT(ColoredString("") $> bold $> bold?)
+  #EXPECT(ColoredOutputStream(DUMMY) $> bold $> bold?)
+
+deftest can-set-dim:
+  #EXPECT(ColorSpec() $> dim $> dim?)
+  #EXPECT(ColoredString("") $> dim $> dim?)
+  #EXPECT(ColoredOutputStream(DUMMY) $> dim $> dim?)
+
+deftest can-set-italic:
+  #EXPECT(ColorSpec() $> italic $> italic?)
+  #EXPECT(ColoredString("") $> italic $> italic?)
+  #EXPECT(ColoredOutputStream(DUMMY) $> italic $> italic?)
+
+deftest can-set-underline:
+  #EXPECT(ColorSpec() $> underline $> underline?)
+  #EXPECT(ColoredString("") $> underline $> underline?)
+  #EXPECT(ColoredOutputStream(DUMMY) $> underline $> underline?)
+
+deftest can-set-reset:
+  #EXPECT(ColorSpec() $> reset $> reset?)
+  #EXPECT(ColoredString("") $> reset $> reset?)
+  #EXPECT(ColoredOutputStream(DUMMY) $> reset $> reset?)
+
+deftest can-set-all:
+  for o in [ColorSpec(), ColoredString(""), ColoredOutputStream(DUMMY)] do:
+    val all = o $> reset $> bold $> dim $> italic $> underline
+    #EXPECT(all $> reset?)
+    #EXPECT(all $> bold?)
+    #EXPECT(all $> dim?)
+    #EXPECT(all $> italic?)
+    #EXPECT(all $> underline?)
+
+deftest can-clear:
+  for o in [ColorSpec(), ColoredString(""), ColoredOutputStream(DUMMY)] do:
+    val cleared = o $> reset $> bold $> dim $> italic $> underline $> clear
+    #EXPECT(not foreground?(cleared))
+    #EXPECT(not background?(cleared))
+    #EXPECT(not reset?(cleared))
+    #EXPECT(not bold?(cleared))
+    #EXPECT(not dim?(cleared))
+    #EXPECT(not italic?(cleared))
+    #EXPECT(not underline?(cleared))
+    #EXPECT(clear?(cleared))
+
+deftest init-state-is-clear:
+  for o in [ColorSpec(), ColoredString(""), ColoredOutputStream(DUMMY)] do:
+    #EXPECT(not foreground?(o))
+    #EXPECT(not background?(o))
+    #EXPECT(not reset?(o))
+    #EXPECT(not bold?(o))
+    #EXPECT(not dim?(o))
+    #EXPECT(not italic?(o))
+    #EXPECT(not underline?(o))
+    #EXPECT(clear?(o))
