@@ -1,3 +1,0 @@
-package term-colors defined-in "lib.stanza"
-
-package term-colors/test defined-in "test.stanza"

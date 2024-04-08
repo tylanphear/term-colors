@@ -1,5 +1,16 @@
-include "src/stanza.proj"
+include? ".slm/stanza.proj"
+pkg-cache: ".slm/pkg-cache"
+
+package term-colors defined-in "src/term-colors.stanza"
+packages term-colors/* defined-in "src/term-colors/"
+
+build main :
+  inputs:
+    term-colors
+  pkg: ".slm/pkgs"
+  ;o: "main"
 
 build-test test:
-  inputs: term-colors/test
-  o: "build/test"
+  inputs:
+    term-colors/test
+  o: "term-colors-test"
