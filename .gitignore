@@ -1,3 +1,5 @@
 .slm
 term-colors-test
 venv/
+.conan2
+.conan2.cache
